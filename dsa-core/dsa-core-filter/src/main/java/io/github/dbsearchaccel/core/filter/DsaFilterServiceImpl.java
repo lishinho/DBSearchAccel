@@ -11,9 +11,49 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * 过滤规则服务实现类.
+ * <p>
+ * 整合灰度过滤器、DSL构建器、查询校验器，提供完整的过滤规则服务.
+ * </p>
+ *
+ * @author DBSearchAccel Team
+ * @since 1.0.0
+ */
 public class DsaFilterServiceImpl implements DsaFilterService {
 
     private static final Logger log = LoggerFactory.getLogger(DsaFilterServiceImpl.class);
+
+    private final DsaGrayFilter grayFilter;
+    private final DsaDslBuilder dslBuilder;
+    private final DsaQueryValidator queryValidator;
+
+    /**
+     * 默认构造方法.
+     * <p>
+     * 使用默认的灰度过滤器、DSL构建器、查询校验器
+     * </p>
+     */
+    public DsaFilterServiceImpl() {
+        this.grayFilter = new DsaGrayFilterImpl();
+        this.dslBuilder = new DsaDslBuilderImpl();
+        this.queryValidator = new DsaQueryValidatorImpl();
+    }
+
+    /**
+     * 构造方法.
+     *
+     * @param grayFilter    灰度过滤器
+     * @param dslBuilder    DSL构建器
+     * @param queryValidator 查询校验器
+     */
+    public DsaFilterServiceImpl(DsaGrayFilter grayFilter,
+                                 DsaDslBuilder dslBuilder,
+                                 DsaQueryValidator queryValidator) {
+        this.grayFilter = grayFilter != null ? grayFilter : new DsaGrayFilterImpl();
+        this.dslBuilder = dslBuilder != null ? dslBuilder : new DsaDslBuilderImpl();
+        this.queryValidator = queryValidator != null ? queryValidator : new DsaQueryValidatorImpl();
+    }
 
     @Override
     public boolean checkGrayAccess(DsaRequest request, DsaSceneConfig config) {
@@ -23,48 +63,25 @@ public class DsaFilterServiceImpl implements DsaFilterService {
             return true;
         }
 
-        boolean allowed = config.allowAccess(grayKey);
-        log.debug("Gray access check, grayKey: {}, allowed: {}", grayKey, allowed);
+        boolean allowed = grayFilter.allowAccess(request, config);
+        log.debug("Gray access check, grayKey: [{}], allowed: {}", grayKey, allowed);
         return allowed;
     }
 
     @Override
     public DsaDsl buildDsl(DsaRequest request, DsaSceneConfig config) {
-        DsaDsl dsl = DsaDsl.of(config.getEsIndex());
-
-        Map<String, Object> esQuery = buildEsQuery(request, config);
-        dsl.query(esQuery);
-
-        dsl.from(request.getOffset());
-        dsl.size(request.getPageSize());
-
-        if (request.getSortField() != null && !request.getSortField().isEmpty()) {
-            dsl.addSort(request.getSortField(), request.getSortOrder());
+        if (dslBuilder instanceof DsaDslBuilderImpl) {
+            ((DsaDslBuilderImpl) dslBuilder).clear();
         }
 
-        log.debug("Built DSL for scene: {}, index: {}", request.getSceneTypeCode(), config.getEsIndex());
+        DsaDsl dsl = dslBuilder.build(request, config);
+        log.debug("Built DSL for scene [{}], index [{}]", request.getSceneTypeCode(), config.getEsIndex());
         return dsl;
     }
 
     @Override
     public boolean validateRequest(DsaRequest request) {
-        if (request.getSceneType() == null && request.getSceneCode() == null) {
-            throw new DsaException(DsaResultCode.PARAM_ERROR.getCode(), "Scene type is required");
-        }
-
-        if (request.getPageNum() == null || request.getPageNum() < 1) {
-            request.setPageNum(1);
-        }
-
-        if (request.getPageSize() == null || request.getPageSize() < 1) {
-            request.setPageSize(10);
-        }
-
-        if (request.getPageSize() > 1000) {
-            request.setPageSize(1000);
-        }
-
-        return true;
+        return queryValidator.validate(request);
     }
 
     @Override

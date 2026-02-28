@@ -50,11 +50,11 @@ public enum DsaDegradeLevel {
      * 构造方法.
      *
      * @param code 级别编码
-     * @param desc 级别描述
+     * @param description 级别描述
      */
-    DsaDegradeLevel(String code, String desc) {
+    DsaDegradeLevel(String code, String description) {
         this.code = code;
-        this.desc = desc;
+        this.description = description;
     }
 
     /**
@@ -72,6 +72,6 @@ public enum DsaDegradeLevel {
      * @return 级别描述
      */
     public String getDesc() {
-        return desc;
+        return description;
     }
 }
