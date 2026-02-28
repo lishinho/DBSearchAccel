@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>io.github.dbsearchaccel</groupId>
+        <artifactId>dsa-core</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>dsa-core-route</artifactId>
+    <name>DSA Core - Route</name>
+    <description>Scene routing and parameter normalization</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.github.dbsearchaccel</groupId>
+            <artifactId>dsa-common-model</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.dbsearchaccel</groupId>
+            <artifactId>dsa-core-index</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.dbsearchaccel</groupId>
+            <artifactId>dsa-core-aggregate</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.dbsearchaccel</groupId>
+            <artifactId>dsa-core-filter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.dbsearchaccel</groupId>
+            <artifactId>dsa-fallback</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-context</artifactId>
+        </dependency>
+    </dependencies>
+
+</project>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>io.github.dbsearchaccel</groupId>
+        <artifactId>db-search-accel</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>dsa-infrastructure</artifactId>
+    <packaging>pom</packaging>
+    <name>DSA Infrastructure</name>
+    <description>Infrastructure modules: ES, Redis, DB, MQ</description>
+
+    <modules>
+        <module>dsa-infra-es</module>
+        <module>dsa-infra-redis</module>
+        <module>dsa-infra-db</module>
+    </modules>
+
+</project>

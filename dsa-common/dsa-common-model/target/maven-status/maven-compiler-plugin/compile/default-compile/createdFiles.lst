@@ -1,0 +1,6 @@
+io/github/dbsearchaccel/common/model/config/DsaGlobalConfig.class
+io/github/dbsearchaccel/common/model/response/DsaResponse.class
+io/github/dbsearchaccel/common/model/request/DsaRequest.class
+io/github/dbsearchaccel/common/model/response/DsaPageInfo.class
+io/github/dbsearchaccel/common/model/config/DsaSceneConfig.class
+io/github/dbsearchaccel/common/model/dsl/DsaDsl.class
