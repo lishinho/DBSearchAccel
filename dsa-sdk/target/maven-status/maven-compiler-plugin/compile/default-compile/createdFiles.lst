@@ -1,8 +1,0 @@
-META-INF/spring-configuration-metadata.json
-io/github/dbsearchaccel/sdk/DsaClient.class
-io/github/dbsearchaccel/sdk/DsaClientImpl.class
-io/github/dbsearchaccel/sdk/DsaProperties$RedisConfig.class
-io/github/dbsearchaccel/sdk/DsaProperties$EsConfig.class
-io/github/dbsearchaccel/sdk/DsaProperties$DbConfig.class
-io/github/dbsearchaccel/sdk/DsaProperties.class
-io/github/dbsearchaccel/sdk/DsaAutoConfiguration.class
