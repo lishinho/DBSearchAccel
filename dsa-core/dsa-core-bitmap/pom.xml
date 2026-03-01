@@ -5,27 +5,25 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>io.github.dbsearchaccel</groupId>
-        <artifactId>db-search-accel</artifactId>
+        <artifactId>dsa-core</artifactId>
         <version>1.0.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>dsa-cache</artifactId>
-    <name>DSA Cache</name>
-    <description>Real-time cache module with AOP interception</description>
+    <artifactId>dsa-core-bitmap</artifactId>
+    <name>DSA Core Bitmap</name>
+    <description>Roaring Bitmap based inverted index for high-performance multi-condition queries</description>
 
     <dependencies>
         <dependency>
             <groupId>io.github.dbsearchaccel</groupId>
-            <artifactId>dsa-common-model</artifactId>
+            <artifactId>dsa-common-core</artifactId>
         </dependency>
+
         <dependency>
-            <groupId>io.github.dbsearchaccel</groupId>
-            <artifactId>dsa-infra-redis</artifactId>
+            <groupId>org.roaringbitmap</groupId>
+            <artifactId>RoaringBitmap</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-aop</artifactId>
-        </dependency>
+
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>

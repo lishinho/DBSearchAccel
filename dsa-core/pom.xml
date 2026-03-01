@@ -19,6 +19,8 @@
         <module>dsa-core-filter</module>
         <module>dsa-core-aggregate</module>
         <module>dsa-core-index</module>
+        <module>dsa-core-bitmap</module>
+        <module>dsa-core-tiered</module>
     </modules>
 
 </project>
