@@ -7,11 +7,12 @@
         <groupId>io.github.dbsearchaccel</groupId>
         <artifactId>db-search-accel</artifactId>
         <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <artifactId>dsa-admin</artifactId>
-    <name>DSA Admin</name>
-    <description>Admin console for operations</description>
+    <artifactId>dsa-demo-order</artifactId>
+    <name>DSA Demo Order</name>
+    <description>Demo project for DSA integration</description>
     <packaging>jar</packaging>
 
     <dependencies>
@@ -20,8 +21,21 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-actuator</artifactId>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-boot-starter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.github.dbsearchaccel</groupId>
+            <artifactId>dsa-sdk</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.github.dbsearchaccel</groupId>
+            <artifactId>dsa-common-model</artifactId>
         </dependency>
     </dependencies>
 

@@ -64,6 +64,7 @@
         <module>dsa-gateway</module>
         <module>dsa-sdk</module>
         <module>dsa-admin</module>
+        <module>demo/dsa-demo-order</module>
     </modules>
 
     <dependencyManagement>

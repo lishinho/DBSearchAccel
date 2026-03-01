@@ -1,0 +1,32 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: dsa-demo-order
+  datasource:
+    url: jdbc:mysql://localhost:3306/dsa_demo?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password: root123
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+dsa:
+  client:
+    server-url: http://localhost:8080
+    connect-timeout: 5000
+    read-timeout: 30000
+    retry-times: 3
+
+logging:
+  level:
+    io.github.dbsearchaccel: DEBUG
+    root: INFO
