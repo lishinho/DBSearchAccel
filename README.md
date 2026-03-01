@@ -475,8 +475,135 @@ DBSearchAccel支持**三种部署方式**，适配不同企业的运维体系：
 4. 若需要自定义过滤/降级，开发对应的插件并注册；
 5. 配置灰度规则，开启小流量灰度验证，验证通过后全量放量。
 
-## 九、后续规划
-### 9.1 短期规划（V1.0-V1.5）
+## 九、性能优化增强（V1.1+）
+
+### 9.1 优化目标
+
+基于技术可行性分析，针对倒排索引加速和缓存一致性补偿进行深度优化：
+
+| 指标 | 优化前 | 优化后 | 提升比例 |
+|------|--------|--------|----------|
+| 多条件查询延迟 | 50-200ms | <10ms | 80%+ |
+| 缓存命中率 | ~75% | >92% | 22%+ |
+| 无效查询比例 | ~15% | <3% | 80%+ |
+| 亿级文档交集计算 | ~500ms | <50ms | 90%+ |
+
+### 9.2 新增模块
+
+#### 9.2.1 dsa-core-bitmap（Roaring Bitmap位图索引）
+
+基于Roaring Bitmap实现高性能倒排索引，支持O(1)复杂度的多条件交并集运算：
+
+```java
+// 位图索引服务
+DsaBitmapIndexService bitmapService = new DsaBitmapIndexServiceImpl();
+
+// 构建索引
+bitmapService.buildIndex("order_scene", "status", "PAID", docIds);
+
+// 多条件交集查询
+Map<String, Object> conditions = new HashMap<>();
+conditions.put("status", "PAID");
+conditions.put("region", "BEIJING");
+RoaringBitmap result = bitmapService.intersect("order_scene", conditions);
+```
+
+核心特性：
+- 动态位图分区：每分区100万文档，支持亿级文档高效存储
+- 高效交并运算：位图AND/OR运算复杂度从O(n)降至O(1)
+- 内存优化：自动压缩存储，降低内存占用
+
+#### 9.2.2 dsa-core-tiered（分层存储架构）
+
+实现内存/SSD/ES三级存储架构，自动管理数据晋升与降级：
+
+```
+L1 内存热数据层 → 延迟 <1ms，命中率目标 60%+
+       ↓ Miss
+L2 SSD温数据层  → 延迟 1-5ms，命中率目标 30%+
+       ↓ Miss
+L3 ES冷数据层   → 延迟 10-50ms，命中率目标 10%
+```
+
+核心特性：
+- 自动晋升：热点数据自动晋升到更高层级
+- 自动降级：冷数据自动降级释放内存
+- 查询模式预测：基于历史查询预测热点数据
+
+#### 9.2.3 缓存增强模块（dsa-cache扩展）
+
+**布隆过滤器**：快速判断主键是否存在，降低无效查询穿透
+```java
+DsaBloomFilter bloomFilter = new DsaBloomFilterImpl();
+bloomFilter.put("order_scene", "ORDER_001");
+boolean mightExist = bloomFilter.mightContain("order_scene", "ORDER_001");
+```
+
+**动态TTL策略**：根据数据变更频率动态调整缓存过期时间
+```java
+DsaDynamicTtlStrategy ttlStrategy = new DsaDynamicTtlStrategyImpl();
+ttlStrategy.recordChange("order_scene", "ORDER_001", "UPDATE", System.currentTimeMillis());
+long ttl = ttlStrategy.calculateTtl("order_scene", "ORDER_001");
+```
+
+**向量时钟**：解决分布式环境下的数据版本冲突
+```java
+DsaVectorClock vectorClock = new DsaVectorClockImpl();
+DsaVectorClockValue v1 = vectorClock.increment("order_scene", "ORDER_001", "node-1");
+DsaClockCompareResult result = vectorClock.compare(v1, v2);
+```
+
+**缓存补偿器**：自动检测并修复缓存不一致
+```java
+DsaCacheCompensator compensator = new DsaCacheCompensatorImpl(cacheService);
+int fixed = compensator.detectAndCompensate("order_scene");
+```
+
+### 9.3 架构演进
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        查询请求入口                              │
+└─────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    L1: 内存热数据层                              │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  Roaring Bitmap位图索引 + Guava Cache热缓存              │   │
+│  │  - O(1)复杂度多条件交并集                                 │   │
+│  │  - LRU淘汰策略                                           │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│  命中率目标：60%+ | 延迟：<1ms                                   │
+└─────────────────────────────────────────────────────────────────┘
+                                │ Miss
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    L2: SSD温数据层                               │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  RocksDB持久化存储                                        │   │
+│  │  - 位图序列化存储                                         │   │
+│  │  - mmap零拷贝读取                                        │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│  命中率目标：30%+ | 延迟：1-5ms                                  │
+└─────────────────────────────────────────────────────────────────┘
+                                │ Miss
+                                ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    L3: ES冷数据层                                │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  Elasticsearch Cluster                                  │   │
+│  │  - 全量数据存储                                          │   │
+│  │  - 异步构建位图索引                                       │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│  命中率目标：10% | 延迟：10-50ms                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 十、后续规划
+### 10.1 短期规划（V1.0-V1.5）
 1. 完成核心模块的开发与测试，发布V1.0正式版；
 2. 完善文档（开发文档、部署文档、接入文档、运维文档）；
 3. 适配更多的数据源（如SQL Server、MongoDB）；
