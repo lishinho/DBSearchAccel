@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DSA Admin Console</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .sidebar { min-height: 100vh; background: #343a40; }
+        .sidebar a { color: #fff; padding: 10px 20px; display: block; text-decoration: none; }
+        .sidebar a:hover, .sidebar a.active { background: #495057; }
+        .content { padding: 20px; }
+        .card-stat { border-left: 4px solid #0d6efd; }
+        .card-stat.warning { border-left-color: #ffc107; }
+        .card-stat.danger { border-left-color: #dc3545; }
+        .status-enabled { color: #198754; }
+        .status-disabled { color: #dc3545; }
+    </style>
+</head>
+<body>
+<div class="container-fluid">
+    <div class="row">
+        <nav class="col-md-2 sidebar">
+            <h4 class="text-white p-3">DSA Admin</h4>
+            <a href="#" onclick="showPage('dashboard')" class="active" id="nav-dashboard">监控大盘</a>
+            <a href="#" onclick="showPage('scene')" id="nav-scene">场景管理</a>
+            <a href="#" onclick="showPage('sync')" id="nav-sync">同步管理</a>
+            <a href="#" onclick="showPage('degrade')" id="nav-degrade">降级管理</a>
+            <a href="#" onclick="showPage('consistency')" id="nav-consistency">一致性校验</a>
+        </nav>
+        <main class="col-md-10 content">
+            <div id="page-dashboard">
+                <h4>监控大盘</h4>
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card card-stat">
+                            <div class="card-body">
+                                <h6 class="text-muted">总查询次数</h6>
+                                <h3 id="stat-total-queries">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card card-stat">
+                            <div class="card-body">
+                                <h6 class="text-muted">平均延迟(ms)</h6>
+                                <h3 id="stat-avg-latency">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card card-stat">
+                            <div class="card-body">
+                                <h6 class="text-muted">命中率(%)</h6>
+                                <h3 id="stat-hit-rate">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card card-stat warning">
+                            <div class="card-body">
+                                <h6 class="text-muted">降级次数</h6>
+                                <h3 id="stat-degrade-count">0</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header">系统健康状态</div>
+                    <div class="card-body" id="health-status">Loading...</div>
+                </div>
+            </div>
+
+            <div id="page-scene" style="display:none">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4>场景管理</h4>
+                    <button class="btn btn-primary" onclick="showSceneModal()">新增场景</button>
+                </div>
+                <table class="table table-striped">
+                    <thead><tr><th>ID</th><th>场景编码</th><th>场景名称</th><th>ES索引</th><th>状态</th><th>操作</th></tr></thead>
+                    <tbody id="scene-list"></tbody>
+                </table>
+            </div>
+
+            <div id="page-sync" style="display:none">
+                <h4>同步管理</h4>
+                <div class="mb-3">
+                    <input type="text" id="sync-scene-code" class="form-control d-inline-block w-auto" placeholder="场景编码">
+                    <button class="btn btn-primary" onclick="triggerFullSync()">触发全量同步</button>
+                </div>
+                <table class="table table-striped">
+                    <thead><tr><th>任务ID</th><th>场景</th><th>类型</th><th>状态</th><th>进度</th><th>操作</th></tr></thead>
+                    <tbody id="sync-task-list"></tbody>
+                </table>
+            </div>
+
+            <div id="page-degrade" style="display:none">
+                <h4>降级管理</h4>
+                <div class="card mb-3">
+                    <div class="card-header">全局降级状态</div>
+                    <div class="card-body" id="global-degrade-status"></div>
+                </div>
+                <table class="table table-striped">
+                    <thead><tr><th>场景编码</th><th>降级级别</th><th>是否降级</th><th>原因</th><th>操作</th></tr></thead>
+                    <tbody id="degrade-list"></tbody>
+                </table>
+            </div>
+
+            <div id="page-consistency" style="display:none">
+                <h4>一致性校验</h4>
+                <div class="mb-3">
+                    <input type="text" id="check-scene-code" class="form-control d-inline-block w-auto" placeholder="场景编码">
+                    <select id="check-type" class="form-select d-inline-block w-auto">
+                        <option value="PRIMARY_KEY">主键校验</option>
+                        <option value="FIELD">字段校验</option>
+                        <option value="FULL">全量校验</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="triggerCheck()">触发校验</button>
+                </div>
+                <table class="table table-striped">
+                    <thead><tr><th>任务ID</th><th>场景</th><th>类型</th><th>状态</th><th>不一致数</th><th>操作</th></tr></thead>
+                    <tbody id="check-task-list"></tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+</div>
+
+<div class="modal fade" id="sceneModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title">场景配置</h5></div>
+            <div class="modal-body">
+                <input type="hidden" id="scene-id">
+                <div class="mb-3"><label class="form-label">场景编码</label><input type="text" id="scene-code" class="form-control"></div>
+                <div class="mb-3"><label class="form-label">场景名称</label><input type="text" id="scene-name" class="form-control"></div>
+                <div class="mb-3"><label class="form-label">ES索引</label><input type="text" id="scene-es-index" class="form-control"></div>
+                <div class="mb-3"><label class="form-label">数据库表</label><input type="text" id="scene-db-table" class="form-control"></div>
+                <div class="mb-3"><label class="form-label">主键字段</label><input type="text" id="scene-pk-field" class="form-control"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveScene()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const API_BASE = '/api';
+
+function showPage(page) {
+    document.querySelectorAll('[id^="page-"]').forEach(el => el.style.display = 'none');
+    document.getElementById('page-' + page).style.display = 'block';
+    document.querySelectorAll('.sidebar a').forEach(el => el.classList.remove('active'));
+    document.getElementById('nav-' + page).classList.add('active');
+    if (page === 'dashboard') loadDashboard();
+    if (page === 'scene') loadScenes();
+    if (page === 'sync') loadSyncTasks();
+    if (page === 'degrade') loadDegradeStatus();
+    if (page === 'consistency') loadCheckTasks();
+}
+
+async function loadDashboard() {
+    try {
+        const resp = await fetch(API_BASE + '/monitor/dashboard');
+        const data = await resp.json();
+        if (data.code === 200) {
+            document.getElementById('stat-total-queries').textContent = data.data.totalQueries || 0;
+            document.getElementById('stat-avg-latency').textContent = data.data.avgLatency || 0;
+            document.getElementById('stat-hit-rate').textContent = (data.data.hitRate || 0).toFixed(2);
+            document.getElementById('stat-degrade-count').textContent = data.data.degradeCount || 0;
+        }
+        const health = await fetch(API_BASE + '/monitor/health');
+        const healthData = await health.json();
+        document.getElementById('health-status').innerHTML = '<pre>' + JSON.stringify(healthData.data, null, 2) + '</pre>';
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function loadScenes() {
+    try {
+        const resp = await fetch(API_BASE + '/scene/list');
+        const data = await resp.json();
+        const tbody = document.getElementById('scene-list');
+        tbody.innerHTML = '';
+        (data.data || []).forEach(s => {
+            const statusClass = s.status === 'ENABLED' ? 'status-enabled' : 'status-disabled';
+            tbody.innerHTML += '<tr><td>' + s.id + '</td><td>' + s.sceneCode + '</td><td>' + s.sceneName + '</td><td>' + s.esIndex + '</td><td class="' + statusClass + '">' + s.status + '</td><td><button class="btn btn-sm btn-warning" onclick="toggleScene(' + s.id + ', \'' + s.status + '\')">' + (s.status === 'ENABLED' ? '禁用' : '启用') + '</button> <button class="btn btn-sm btn-danger" onclick="deleteScene(' + s.id + ')">删除</button></td></tr>';
+        });
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+function showSceneModal() {
+    document.getElementById('scene-id').value = '';
+    document.getElementById('scene-code').value = '';
+    document.getElementById('scene-name').value = '';
+    document.getElementById('scene-es-index').value = '';
+    document.getElementById('scene-db-table').value = '';
+    document.getElementById('scene-pk-field').value = '';
+    new bootstrap.Modal(document.getElementById('sceneModal')).show();
+}
+
+async function saveScene() {
+    const config = {
+        id: document.getElementById('scene-id').value || null,
+        sceneCode: document.getElementById('scene-code').value,
+        sceneName: document.getElementById('scene-name').value,
+        esIndex: document.getElementById('scene-es-index').value,
+        dbTable: document.getElementById('scene-db-table').value,
+        pkField: document.getElementById('scene-pk-field').value
+    };
+    const method = config.id ? 'PUT' : 'POST';
+    await fetch(API_BASE + '/scene', { method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(config) });
+    bootstrap.Modal.getInstance(document.getElementById('sceneModal')).hide();
+    loadScenes();
+}
+
+async function toggleScene(id, status) {
+    const action = status === 'ENABLED' ? 'disable' : 'enable';
+    await fetch(API_BASE + '/scene/' + id + '/' + action, { method: 'POST' });
+    loadScenes();
+}
+
+async function deleteScene(id) {
+    if (confirm('确定删除?')) {
+        await fetch(API_BASE + '/scene/' + id, { method: 'DELETE' });
+        loadScenes();
+    }
+}
+
+async function loadSyncTasks() {
+    try {
+        const resp = await fetch(API_BASE + '/sync/tasks');
+        const data = await resp.json();
+        const tbody = document.getElementById('sync-task-list');
+        tbody.innerHTML = '';
+        (data.data || []).forEach(t => {
+            tbody.innerHTML += '<tr><td>' + t.taskId.substring(0, 8) + '...</td><td>' + t.sceneCode + '</td><td>' + t.syncType + '</td><td>' + t.status + '</td><td>' + (t.progress * 100).toFixed(1) + '%</td><td>' + (t.status === 'RUNNING' ? '<button class="btn btn-sm btn-danger" onclick="cancelSync(\'' + t.taskId + '\')">取消</button>' : '') + '</td></tr>';
+        });
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function triggerFullSync() {
+    const sceneCode = document.getElementById('sync-scene-code').value;
+    if (!sceneCode) { alert('请输入场景编码'); return; }
+    await fetch(API_BASE + '/sync/full/' + sceneCode, { method: 'POST' });
+    loadSyncTasks();
+}
+
+async function cancelSync(taskId) {
+    await fetch(API_BASE + '/sync/task/' + taskId + '/cancel', { method: 'POST' });
+    loadSyncTasks();
+}
+
+async function loadDegradeStatus() {
+    try {
+        const globalResp = await fetch(API_BASE + '/degrade/global');
+        const globalData = await globalResp.json();
+        document.getElementById('global-degrade-status').innerHTML = '<p>状态: <strong>' + (globalData.data.isDegrading ? '降级中' : '正常') + '</strong></p><p>原因: ' + (globalData.data.degradeReason || '-') + '</p><button class="btn ' + (globalData.data.isDegrading ? 'btn-success' : 'btn-warning') + '" onclick="toggleGlobalDegrade(' + !globalData.data.isDegrading + ')">' + (globalData.data.isDegrading ? '恢复' : '全局降级') + '</button>';
+
+        const resp = await fetch(API_BASE + '/degrade/list');
+        const data = await resp.json();
+        const tbody = document.getElementById('degrade-list');
+        tbody.innerHTML = '';
+        (data.data || []).forEach(d => {
+            tbody.innerHTML += '<tr><td>' + d.sceneCode + '</td><td>' + d.degradeLevel + '</td><td>' + (d.isDegrading ? '是' : '否') + '</td><td>' + (d.degradeReason || '-') + '</td><td>' + (d.isDegrading ? '<button class="btn btn-sm btn-success" onclick="recoverScene(\'' + d.sceneCode + '\')">恢复</button>' : '<button class="btn btn-sm btn-warning" onclick="degradeScene(\'' + d.sceneCode + '\')">降级</button>') + '</td></tr>';
+        });
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function toggleGlobalDegrade(isDegrading) {
+    await fetch(API_BASE + '/degrade/global', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ isDegrading, reason: 'Manual operation' }) });
+    loadDegradeStatus();
+}
+
+async function degradeScene(sceneCode) {
+    await fetch(API_BASE + '/degrade/' + sceneCode + '/degrade', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ level: 'SCENE', reason: 'Manual' }) });
+    loadDegradeStatus();
+}
+
+async function recoverScene(sceneCode) {
+    await fetch(API_BASE + '/degrade/' + sceneCode + '/recover', { method: 'POST' });
+    loadDegradeStatus();
+}
+
+async function loadCheckTasks() {
+    try {
+        const resp = await fetch(API_BASE + '/consistency/tasks');
+        const data = await resp.json();
+        const tbody = document.getElementById('check-task-list');
+        tbody.innerHTML = '';
+        (data.data || []).forEach(t => {
+            tbody.innerHTML += '<tr><td>' + t.taskId.substring(0, 8) + '...</td><td>' + t.sceneCode + '</td><td>' + t.checkType + '</td><td>' + t.status + '</td><td>' + (t.mismatchCount || 0) + '</td><td><button class="btn btn-sm btn-info" onclick="viewReport(\'' + t.taskId + '\')">查看报告</button></td></tr>';
+        });
+    } catch (e) {
+        console.error(e);
+    }
+}
+
+async function triggerCheck() {
+    const sceneCode = document.getElementById('check-scene-code').value;
+    const checkType = document.getElementById('check-type').value;
+    if (!sceneCode) { alert('请输入场景编码'); return; }
+    await fetch(API_BASE + '/consistency/check', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ sceneCode, checkType }) });
+    loadCheckTasks();
+}
+
+async function viewReport(taskId) {
+    const resp = await fetch(API_BASE + '/consistency/report/' + taskId);
+    const data = await resp.json();
+    alert(data.data);
+}
+
+showPage('dashboard');
+</script>
+</body>
+</html>
